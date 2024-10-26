@@ -11,37 +11,82 @@
 .MODEL SMALL
 .STACK 100H
 .DATA
-name_prompt DB 'Please type your name: ',0
-out_msg     DB 'Your name in capitals is: ',0
+name_prompt DB 'Please type your name: $'
+out_msg     DB 'Your name in capitals is: $'
 in_name     DB 31 DUP (?)
 
+
 .CODE
-INCLUDE io.mac 
 main PROC
-    STARTUP
-    PutStr name_prompt       ; request character string
-    GetStr in_name,31        ; read input character string
-    nwln
-    PutStr out_msg
-    mov BX,OFFSET in_name    ; BX := address of in_name
+    MOV AX, @DATA
+    MOV DS, AX
+
+
+    ; Print the prompt for name input
+    MOV DX, OFFSET name_prompt
+    MOV AH, 09H
+    INT 21H
+
+
+    ; Read the string
+    MOV DX, OFFSET in_name
+    MOV AH, 0AH
+    INT 21H
+
+
+    ; New line
+    MOV AH, 02H
+    MOV DL, 0DH
+    INT 21H
+    MOV DL, 0AH
+    INT 21H
+
+
+    ; Print the output message
+    MOV DX, OFFSET out_msg
+    MOV AH, 09H
+    INT 21H
+
+
+    ; Convert and display the string in uppercase
+    LEA BX, in_name + 1
+    MOV CX, [BX - 1]
+
 
 process_char:
-    mov AL,[BX]              ; move the char. to AL
-    cmp AL,0                 ; if it is the NULL character
-    je done                  ; conversion done
-    cmp AL,'a'               ; if (char < 'a')
-    jl not_lower_case        ; not a lowercase letter
-    cmp AL,'z'               ; if (char > 'z')
-    jg not_lower_case        ; not a lowercase letter
-    add AL,'A'-'a'           ; convert to uppercase
+    MOV AL, [BX]
+    CMP AL, 0
+    JE done
+
+
+    CMP AL, 'a'
+    JL not_lower_case
+    CMP AL, 'z'
+    JG not_lower_case
+    SUB AL, 20H
+
 
 not_lower_case:
-    PutCh AL                 ; write the character
-    inc BX                   ; BX points to next char.
-    jmp process_char         ; go back to process next char.
+    MOV DL, AL
+    MOV AH, 02H
+    INT 21H
+
+
+    INC BX
+    LOOP process_char
+
 
 done:
-    .EXIT
+    ; New line
+    MOV AH, 02H
+    MOV DL, 0DH
+    INT 21H
+    MOV DL, 0AH
+    INT 21H
+
+
+    ; Terminate the program
+    MOV AH, 4CH
+    INT 21H
 main ENDP
 END main
-

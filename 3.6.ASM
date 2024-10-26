@@ -10,42 +10,95 @@
 .MODEL SMALL
 .STACK 100H
 .DATA
-char_prompt DB 'Please input a character: ',0
-out_msg1    DB 'The ASCII code of ''',0
-out_msg2    DB ''' in hex is ',0
-query_msg   DB 'Do you want to quit (Y/N)? ',0
+char_prompt DB 'Please input a character: $'
+out_msg1    DB 0AH, 0DH, 'The ASCII code of ',0
+out_msg2    DB ' in hex is $'
+query_msg   DB 'Do you want to quit (Y/N)? $'
 hex_table   DB '0123456789ABCDEF'
 
+
 .CODE
-.486
-INCLUDE io.mac 
 main PROC
-    STARTUP
+    MOV AX, @DATA
+    MOV DS, AX
+
 
 read_char:
-    PutStr char_prompt ; request a char. input
-    GetCh AL           ; read input character
-    mov AH,AL
-    PutStr out_msg1
-    PutCh AL
-    PutStr out_msg2
-    mov BX,OFFSET hex_table ; BX = translation table
-    shr AL,4                 ; move upper 4 bits to lower half
-    xlatb                    ; replace AL with hex digit
-    PutCh AL                 ; write the first hex digit
-    mov AL,AH                ; restore input character to AL
-    and AL,0FH               ; mask off upper 4 bits
-    xlatb                    ; replace AL with hex digit
-    PutCh AL                 ; write the second hex digit
+    ; Print the prompt for character input
+    MOV DX, OFFSET char_prompt
+    MOV AH, 09H
+    INT 21H
 
-    mov AH,0
-    PutStr query_msg         ; query user whether to terminate
-    GetCh AL                 ; read response
-    cmp AL,'Y'               ; if response is not 'Y'
-    jne read_char            ; otherwise, terminate program
+
+    ; Read the character
+    MOV AH, 01H
+    INT 21H
+    MOV BL, AL
+
+
+    ; Print the first message
+    MOV DX, OFFSET out_msg1
+    MOV AH, 09H
+    INT 21H
+
+
+    ; Print the character
+    MOV DL, BL
+    MOV AH, 02H
+    INT 21H
+
+
+    ; Print the second message
+    MOV DX, OFFSET out_msg2
+    MOV AH, 09H
+    INT 21H
+
+
+    ; Use xlat to convert and print the hex code
+    MOV BX, OFFSET hex_table
+    MOV AL, BL
+    SHR AL, 4
+    XLAT
+    MOV DL, AL
+    MOV AH, 02H
+    INT 21H
+    MOV AL, BL
+    AND AL, 0FH
+    XLAT
+    MOV DL, AL
+    MOV AH, 02H
+    INT 21H
+
+
+    ; New line
+    MOV AH, 02H
+    MOV DL, 0DH
+    INT 21H
+    MOV DL, 0AH
+    INT 21H
+
+
+    ; Ask if the user wants to quit
+    MOV DX, OFFSET query_msg
+    MOV AH, 09H
+    INT 21H
+
+
+    ; Read the response
+    MOV AH, 01H
+    INT 21H
+    MOV DL, AL
+    MOV AH, 02H
+    INT 21H
+
+
+    CMP AL, 'Y'
+    JNE read_char
+
 
 done:
-    .EXIT
+    ; Terminate the program
+    MOV AH, 4CH
+    INT 21H
 main ENDP
 END main
-

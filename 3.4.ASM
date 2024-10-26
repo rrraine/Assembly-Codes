@@ -9,45 +9,111 @@
 ;Input: Requests a character from keyboard.
 ;Output: Prints the ASCII code of the input character in binary.
 
-.MODEL SMALL
+..MODEL SMALL
 .STACK 100H
+
+
 .DATA
-char_prompt DB 'Please input a character: ',0
-out_msg1    DB 'The ASCII code of "',0
-out_msg2    DB '", in binary is ',0
-query_msg   DB 'Do you want to quit (Y/N)? ',0
+    char_prompt DB 0DH, 0AH, 'Please input a character: $'
+    out_msg1    DB 'The ASCII code of "',0
+    out_msg2    DB ', in binary is $'
+    query_msg   DB 0DH, 0AH, 'Do you want to quit (Y/N)? $'
+    newline     DB 0DH, 0AH, '$'
+
 
 .CODE
-INCLUDE io.mac
-main PROC
-.STARTUP
-read_char:
-    PutStr char_prompt     ; request a char. input
-    GetCh AL               ; read input character
-    nwln
-    PutStr out_msg1
-    PutCh AL
-    PutStr out_msg2
-    mov AH,80H             ; mask byte = 80H
-    mov CX,8               ; loop count to print 8 bits
-print_bit:
-    test AL,AH             ; test does not modify AL
-    jz print_0             ; if tested bit is 0, print it
-    PutCh '1'              ; otherwise, print 1
-    jmp skip1
-print_0:
-    PutCh '0'              ; print 0
-skip1:
-    shr AH,1               ; right shift mask bit to test
-                           ; next bit of the ASCII code
-loop print_bit
-nwln
-    PutStr query_msg       ; query user whether to terminate
-    GetCh AL               ; read response
-    nwln
-    cmp AL,'Y'             ; if response is not 'Y'
-    jne read_char          ; read another character
-done:
-.EXIT
-main ENDP
-END main
+    MAIN PROC
+        ; Set up the data segment
+        MOV AX, @DATA
+        MOV DS, AX
+
+
+    MAIN_LOOP:
+        ; Print char_prompt (Please input a character)
+        MOV AH, 09H
+        LEA DX, char_prompt
+        INT 21H
+
+
+        ; Get the character input
+        MOV AH, 01H
+        INT 21H
+        MOV BL, AL  ; Store the character in BL for processing
+
+
+        ; Print a newline
+        MOV AH, 09H
+        LEA DX, newline
+        INT 21H
+
+
+        ; Print out_msg1 ("The ASCII code of '")
+        MOV AH, 09H
+        LEA DX, out_msg1
+        INT 21H
+
+
+        ; Print the character entered
+        MOV DL, BL
+        MOV AH, 02H
+        INT 21H
+
+
+        ; Print out_msg2 ('", in binary is')
+        MOV AH, 09H
+        LEA DX, out_msg2
+        INT 21H
+
+
+        ; Convert and print the binary equivalent
+        MOV CL, 8   ; Set counter for 8 bits
+    PRINT_BINARY:
+        MOV AH, 02H ; DOS function to print a single character
+        ROL BL, 1   ; Rotate left to get the MSB in carry
+        JC  PRINT_ONE
+        MOV DL, '0' ; Print '0' if no carry
+        JMP PRINT_CHAR
+    PRINT_ONE:
+        MOV DL, '1' ; Print '1' if carry set
+    PRINT_CHAR:
+        INT 21H
+        DEC CL      ; Decrement bit counter
+        JNZ PRINT_BINARY ; Loop until all bits are printed
+
+
+        ; Print a newline
+        MOV AH, 09H
+        LEA DX, newline
+        INT 21H
+
+
+        ; Ask the user if they want to quit (Y/N)
+        MOV AH, 09H
+        LEA DX, query_msg
+        INT 21H
+
+
+        ; Get the user's response
+        MOV AH, 01H
+        INT 21H
+
+
+        ; Check if the user entered 'Y' or 'y'
+        CMP AL, 'Y'
+        JE QUIT_PROGRAM
+        CMP AL, 'y'
+        JE QUIT_PROGRAM
+
+
+        ; Otherwise, continue the loop
+        JMP MAIN_LOOP
+
+
+    QUIT_PROGRAM:
+        ; Exit program
+        MOV AH, 4CH
+        INT 21H
+
+
+    MAIN ENDP
+END MAIN
