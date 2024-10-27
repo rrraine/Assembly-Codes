@@ -3,85 +3,108 @@
 ; Program Description: This program prints the binary equivalent of the ASCII code of a character.
 ; Date: October 24, 2024
 
-
 .MODEL SMALL
 .STACK 100H
-
 .DATA
-    char_prompt DB 0DH, 0AH, 'Please input a character: $'
-    out_msg1    DB 'The ASCII code of "',0
-    out_msg2    DB ', in binary is $'
-    query_msg   DB 0DH, 0AH, 'Do you want to quit (Y/N)? $'
-    newline     DB 0DH, 0AH, '$'
+    char_prompt DB 0AH,'Please input a character: $'
+    out_msg1 DB 'The ASCII code of ''$'
+    out_msg2 DB "', in binary is $"
+    query_msg DB 'Do you want to quit (Y/N): $'
+    char_input DB ?  ; Variable to store character input
+
 
 .CODE
-    MAIN PROC
-        ; Set up the data segment
-        MOV AX, @DATA
-        MOV DS, AX
+main PROC
+    .STARTUP
 
-    MAIN_LOOP:
-        ; Print char_prompt (Please input a character)
-        MOV AH, 09H
-        LEA DX, char_prompt
-        INT 21H
 
-        ; Get the character input
-        MOV AH, 01H
-        INT 21H
-        MOV BL, AL  ; Store the character in BL for processing
+MAIN_LOOP:
+read_char:
+    ; Display char_prompt message
+    MOV DX, OFFSET char_prompt
+    MOV AH, 09h           ; DOS function to display a string
+    INT 21h
 
-        ; Print a newline
-        MOV AH, 09H
-        LEA DX, newline
-        INT 21H
 
-        ; Print out_msg1 ("The ASCII code of '")
-        MOV AH, 09H
-        LEA DX, out_msg1
-        INT 21H
+    ; Get character input (without echo) and store in char_input
+    MOV AH, 01h           ; DOS function to read character
+    INT 21h
+    MOV char_input, AL    ; Store character in char_input
 
-        ; Print the character entered
-        MOV DL, BL
-        MOV AH, 02H
-        INT 21H
 
-        ; Print out_msg2 ('", in binary is')
-        MOV AH, 09H
-        LEA DX, out_msg2
-        INT 21H
+    ; New line
+    MOV AH, 02h
+    MOV DL, 0Dh           ; Carriage return
+    INT 21h
+    MOV DL, 0Ah           ; Line feed
+    INT 21h
 
-        ; Convert and print the binary equivalent
-        MOV CL, 8          ; Set counter for 8 bits
-        MOV AL, BL         ; Copy character to AL for processing
-    PRINT_BINARY:
-        MOV AH, 02H        ; DOS function to print a single character
-        SHR AL, 1          ; Shift right to move LSB to carry
-        JNC PRINT_ZERO     ; No carry, print '0'
-        MOV DL, '1'        ; Carry set, print '1'
-        JMP PRINT_CHAR
-    PRINT_ZERO:
-        MOV DL, '0'        ; Print '0' if no carry
-    PRINT_CHAR:
-        INT 21H
-        DEC CL             ; Decrement bit counter
-        JNZ PRINT_BINARY   ; Loop until all bits are printed
 
-        ; Print a newline
-        MOV AH, 09H
-        LEA DX, newline
-        INT 21H
+    ; Display out_msg1 message
+    MOV DX, OFFSET out_msg1
+    MOV AH, 09h
+    INT 21h
 
-        ; Ask the user if they want to quit (Y/N)
-        MOV AH, 09H
-        LEA DX, query_msg
-        INT 21H
 
-        ; Get the user's response
-        MOV AH, 01H
-        INT 21H
+    ; Display the character stored in char_input
+    MOV DL, char_input    ; Move input character to DL for display
+    MOV AH, 02h
+    INT 21h
 
-        ; Check if the user entered 'Y' or 'y'
+
+    ; Display out_msg2 message
+    MOV DX, OFFSET out_msg2
+    MOV AH, 09h
+    INT 21h
+
+
+    ; Load character input into BL for binary conversion
+    MOV BL, char_input    ; Copy char_input to BL to keep it unchanged
+
+
+    ; Initialize mask in BH
+    MOV BH, 80H           ; Start with leftmost bit mask (10000000b)
+    MOV CX, 8             ; Loop for 8 bits
+
+
+print_bit:
+    TEST BL, BH           ; Test if the current bit in BL is 1
+    JZ print_0            ; If 0, jump to print_0
+    MOV DL, '1'           ; Otherwise, print '1'
+    JMP skip_print
+
+
+print_0:
+    MOV DL, '0'           ; Print '0'
+
+
+skip_print:
+    MOV AH, 02h
+    INT 21h               ; Display the character in DL
+    SHR BH, 1             ; Shift mask to the right for next bit
+    LOOP print_bit
+
+
+    ; New line
+    MOV AH, 02h
+    MOV DL, 0Dh           ; Carriage return
+    INT 21h
+    MOV DL, 0Ah           ; Line feed
+    INT 21h
+
+
+    ; Display query_msg message
+    MOV DX, OFFSET query_msg
+    MOV AH, 09h
+    INT 21h
+
+
+    ; Get response from user
+    MOV AH, 01h           ; Function to read a character
+    INT 21h               ; Read response into AL
+
+
+   ; Check if the user entered 'Y' or 'y'
         CMP AL, 'Y'
         JE QUIT_PROGRAM
         CMP AL, 'y'
@@ -97,3 +120,4 @@
 
     MAIN ENDP
 END MAIN
+
