@@ -3,9 +3,6 @@
 ; Program Description: This program prints the hex equivalent of the ASCII code of a character.
 ; Date: October 24, 2024
 
-; TITLE: Hex equivalent of characters  HEXCHAR.ASM
-; Objective: To print the hex equivalent of
-; ASCII character code. Demonstrates the use of xlat instruction.
 
 .MODEL SMALL
 .STACK 100H
@@ -93,7 +90,8 @@ read_char:
 
 
     CMP AL, 'Y'
-    JNE read_char
+    JNE done
+    ;JNE read_char
 
 
 done:
